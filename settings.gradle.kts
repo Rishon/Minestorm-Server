@@ -1,0 +1,2 @@
+rootProject.name = "Minestorm-Server"
+
