@@ -15,12 +15,8 @@ dependencies {
     // Minestom
     implementation("net.minestom:minestom-snapshots:73b308673b")
 
-    // Lombok
-    implementation("org.projectlombok:lombok:1.18.34")
-
-    // Logging
-    implementation("org.apache.logging.log4j:log4j-core:2.23.1")
-    implementation("org.apache.logging.log4j:log4j-api:2.23.1")
+    // Reflections
+    implementation("org.reflections:reflections:0.10.2")
 }
 
 tasks.withType<Jar> {

@@ -1,16 +1,13 @@
 package systems.rishon;
 
-import lombok.Getter;
 import net.minestom.server.MinecraftServer;
-import net.minestom.server.coordinate.Pos;
-import net.minestom.server.entity.Player;
 import net.minestom.server.event.GlobalEventHandler;
-import net.minestom.server.event.player.AsyncPlayerConfigurationEvent;
 import net.minestom.server.instance.InstanceContainer;
 import net.minestom.server.instance.InstanceManager;
-import net.minestom.server.instance.block.Block;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import systems.rishon.listeners.EventHandler;
+import systems.rishon.profile.PlayerProfile;
+import systems.rishon.utils.Logger;
+import systems.rishon.world.WorldHandler;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -18,15 +15,27 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.Scanner;
 
-@Getter
 public class Minestorm {
 
     // Logger
-    private static final Logger logger = LogManager.getLogger(Minestorm.class);
-
+    private static final Logger logger = new Logger();
     // Server instance
-    private static MinecraftServer minecraftServer;
-    private static InstanceContainer instanceContainer;
+    public static MinecraftServer minecraftServer;
+    public static InstanceContainer instanceContainer;
+    // Global event handler
+    public static GlobalEventHandler globalEventHandler;
+    // Instance
+    private static Minestorm instance;
+    // World Handler
+    private static WorldHandler worldHandler;
+    // Event Handler
+    private static EventHandler eventHandler;
+    // Player Profile
+    private static PlayerProfile playerProfile;
+
+    protected Minestorm() {
+        instance = this;
+    }
 
     public static void main(String[] args) {
         init();
@@ -42,8 +51,17 @@ public class Minestorm {
         InstanceManager instanceManager = MinecraftServer.getInstanceManager();
         instanceContainer = instanceManager.createInstanceContainer();
 
-        // Generate a chunk
-        generateChunk();
+        // Global event handler
+        globalEventHandler = MinecraftServer.getGlobalEventHandler();
+
+        // World Handler
+        worldHandler = new WorldHandler(instance);
+
+        // Event Handler
+        eventHandler = new EventHandler(instance);
+
+        // Player Profile
+        playerProfile = new PlayerProfile();
 
         // Default server port
         int serverPort = 25565;
@@ -62,17 +80,28 @@ public class Minestorm {
                 }
                 reader.close();
             } catch (IOException e) {
-                logger.warn("Failed to read server.properties file.", e);
+                logger.warn("Failed to read server.properties file.");
             }
         }
 
         // Start the server
-        logger.info("Starting server on port {}", serverPort);
+        logger.info("Starting server on port " + serverPort);
         minecraftServer.start("0.0.0.0", serverPort);
-        logger.info("Server started on port {}", serverPort);
+        logger.info("Server started on port " + serverPort);
 
         // Start reading action commands
         readActionCommands();
+    }
+
+    private static void endProcess() {
+        logger.info("Stopping server...");
+        if (MinecraftServer.isStopping()) {
+            logger.warn("Server is already stopping.");
+            return;
+        }
+        MinecraftServer.stopCleanly();
+        logger.info("Server stopped.");
+        logger.end();
     }
 
     private static void readActionCommands() {
@@ -81,29 +110,13 @@ public class Minestorm {
             String command = scanner.nextLine();
 
             if (command.equalsIgnoreCase("stop")) {
-                logger.info("Stopping server...");
-                if (MinecraftServer.isStopping()) {
-                    logger.warn("Server is already stopping.");
-                    continue;
-                }
-                MinecraftServer.stopCleanly();
-                logger.info("Server stopped.");
+                endProcess();
                 break;
             }
         }
     }
 
-    private static void generateChunk() {
-        logger.info("Generating chunk...");
-        // Generate a chunk
-        instanceContainer.setGenerator(unit -> unit.modifier().fillHeight(0, 40, Block.GRASS_BLOCK));
-
-        GlobalEventHandler globalEventHandler = MinecraftServer.getGlobalEventHandler();
-        globalEventHandler.addListener(AsyncPlayerConfigurationEvent.class, event -> {
-            final Player player = event.getPlayer();
-            event.setSpawningInstance(instanceContainer);
-            player.setRespawnPoint(new Pos(0, 42, 0));
-        });
-        logger.info("World chunk generated.");
+    public static Minestorm getInstance() {
+        return instance;
     }
 }
